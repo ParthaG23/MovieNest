@@ -6,15 +6,31 @@ const API_KEY = import.meta.env.VITE_TMDB_API_KEY;;
 
 const BASE_URL = "https://api.themoviedb.org/3";
 
-// 1️⃣ Find movie by IMDb ID
+/* Fetch full TMDb movie data using IMDb ID
+ */
 export async function fetchTMDbByImdb(imdbId) {
-  const res = await fetch(
-    `${BASE_URL}/find/${imdbId}?api_key=${API_KEY}&external_source=imdb_id`
-  );
-  const data = await res.json();
-  return data.movie_results?.[0];
-}
+  try {
+    // STEP 1: Find TMDb ID using IMDb ID
+    const findRes = await fetch(
+      `${BASE_URL}/find/${imdbId}?api_key=${API_KEY}&external_source=imdb_id`
+    );
+    const findData = await findRes.json();
 
+    const movie = findData.movie_results?.[0];
+    if (!movie) return null;
+
+    // STEP 2: Fetch FULL movie details (includes genres)
+    const detailsRes = await fetch(
+      `${BASE_URL}/movie/${movie.id}?api_key=${API_KEY}`
+    );
+    const details = await detailsRes.json();
+
+    return details;
+  } catch (error) {
+    console.error("TMDb fetch error:", error);
+    return null;
+  }
+}
 // 2️⃣ Fetch cast by TMDb movie ID
 export async function fetchMovieCast(tmdbId) {
   const res = await fetch(

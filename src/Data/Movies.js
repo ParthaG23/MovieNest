@@ -1,10 +1,7 @@
 // src/data.js
 const movies = [
  {
-    
-    id: 4,
-    title: "Jawan",
-    year: 2023,
+
     imdbId: "tt15354916",
     category:"bollywood",
     subCata:"Action",
@@ -17,9 +14,7 @@ const movies = [
   },
   
    {
-    id:3,
-    title:"KGF Chapter 1",
-    year:2019,
+   
     imdbId:"tt7838252",
     category:"southdub",
     subCata:"Action",
