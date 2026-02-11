@@ -1,60 +1,70 @@
-// src/tmdb.js
-const API_KEY = import.meta.env.VITE_TMDB_API_KEY;;
+// src/Data/tmdb.js
 
-
-
-
+const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 const BASE_URL = "https://api.themoviedb.org/3";
 
-/* Fetch full TMDb movie data using IMDb ID
- */
-export async function fetchTMDbByImdb(imdbId) {
+/* --------------------------------------------------
+   Fetch FULL DETAILS (Movie / Anime / Web Series)
+-------------------------------------------------- */
+export async function fetchTMDbDetails(tmdbId, type = "movie") {
   try {
-    // STEP 1: Find TMDb ID using IMDb ID
-    const findRes = await fetch(
-      `${BASE_URL}/find/${imdbId}?api_key=${API_KEY}&external_source=imdb_id`
-    );
-    const findData = await findRes.json();
+    const endpoint =
+      type === "tv"
+        ? `${BASE_URL}/tv/${tmdbId}`
+        : `${BASE_URL}/movie/${tmdbId}`;
 
-    const movie = findData.movie_results?.[0];
-    if (!movie) return null;
+    const res = await fetch(`${endpoint}?api_key=${API_KEY}`);
+    if (!res.ok) throw new Error("TMDb fetch failed");
 
-    // STEP 2: Fetch FULL movie details (includes genres)
-    const detailsRes = await fetch(
-      `${BASE_URL}/movie/${movie.id}?api_key=${API_KEY}`
-    );
-    const details = await detailsRes.json();
-
-    return details;
+    return await res.json();
   } catch (error) {
-    console.error("TMDb fetch error:", error);
+    console.error("TMDb details error:", error);
     return null;
   }
 }
-// 2️⃣ Fetch cast by TMDb movie ID
-export async function fetchMovieCast(tmdbId) {
-  const res = await fetch(
-    `${BASE_URL}/movie/${tmdbId}/credits?api_key=${API_KEY}`
-  );
-  const data = await res.json();
-  return data.cast || [];
+
+/* --------------------------------------------------
+   Fetch CAST (Movie / TV)
+-------------------------------------------------- */
+export async function fetchCast(tmdbId, type = "movie") {
+  try {
+    const endpoint =
+      type === "tv"
+        ? `${BASE_URL}/tv/${tmdbId}/credits`
+        : `${BASE_URL}/movie/${tmdbId}/credits`;
+
+    const res = await fetch(`${endpoint}?api_key=${API_KEY}`);
+    const data = await res.json();
+
+    return data.cast || [];
+  } catch (error) {
+    console.error("TMDb cast error:", error);
+    return [];
+  }
 }
-// src/Data/tmdb.js
-export async function fetchMovieTrailer(tmdbId) {
-  const res = await fetch(
-    `https://api.themoviedb.org/3/movie/${tmdbId}/videos?api_key=${
-      import.meta.env.VITE_TMDB_API_KEY
-    }`
-  );
 
-  const data = await res.json();
-  const videos = data.results || [];
+/* --------------------------------------------------
+   Fetch TRAILER (Movie / TV)
+-------------------------------------------------- */
+export async function fetchTrailer(tmdbId, type = "movie") {
+  try {
+    const endpoint =
+      type === "tv"
+        ? `${BASE_URL}/tv/${tmdbId}/videos`
+        : `${BASE_URL}/movie/${tmdbId}/videos`;
 
-  // Priority order
-  return (
-    videos.find(v => v.type === "Trailer" && v.site === "YouTube") ||
-    videos.find(v => v.type === "Teaser" && v.site === "YouTube") ||
-    videos.find(v => v.site === "YouTube") ||
-    null
-  );
+    const res = await fetch(`${endpoint}?api_key=${API_KEY}`);
+    const data = await res.json();
+
+    const videos = data.results || [];
+    return (
+      videos.find(v => v.type === "Trailer" && v.site === "YouTube") ||
+      videos.find(v => v.type === "Teaser" && v.site === "YouTube") ||
+      videos.find(v => v.site === "YouTube") ||
+      null
+    );
+  } catch (error) {
+    console.error("TMDb trailer error:", error);
+    return null;
+  }
 }

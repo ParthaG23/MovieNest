@@ -14,7 +14,7 @@ const Navbar = ({ onSearch }) => {
     onSearch(value); // send text to parent
   };
   return (
-    <nav className="bg-black text-gray-200 px-6 py-4">
+    <nav className="bg-black text-gray-200 px-2 md:px-4 lg:px-6 py-4">
       <div className="flex items-center justify-between">
         {/* Logo */}
         <NavLink to="/" className="hover:text-red-400">

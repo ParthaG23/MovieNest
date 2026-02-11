@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import Pagination from "./Pagination";
 import LoadingSkeleton from "../Components/LoadingSkeleton";
-import { fetchTMDbByImdb } from "./tmds";
+import { fetchTMDbDetails } from "./tmds";
+
 
 // TEMP local data (later replace with Firebase / Cloud DB)
 import movies from "./Movies";
 
-const MOVIES_PER_PAGE = 12;
+const MOVIES_PER_PAGE = 18;
 const IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 
 const MoviesGrid = ({ filter, searchText }) => {
@@ -24,9 +25,7 @@ const MoviesGrid = ({ filter, searchText }) => {
      1️⃣ FILTER BY CATEGORY ONLY (cloud safe)
   -------------------------------------------------- */
   const filteredMovies = useMemo(() => {
-    return filter
-      ? movies.filter((m) => m.category === filter)
-      : movies;
+    return filter ? movies.filter((m) => m.category === filter) : movies;
   }, [filter]);
 
   /* --------------------------------------------------
@@ -36,10 +35,7 @@ const MoviesGrid = ({ filter, searchText }) => {
   const startIndex = (currentPage - 1) * MOVIES_PER_PAGE;
 
   const currentMovies = useMemo(() => {
-    return filteredMovies.slice(
-      startIndex,
-      startIndex + MOVIES_PER_PAGE
-    );
+    return filteredMovies.slice(startIndex, startIndex + MOVIES_PER_PAGE);
   }, [filteredMovies, startIndex]);
 
   /* --------------------------------------------------
@@ -49,50 +45,65 @@ const MoviesGrid = ({ filter, searchText }) => {
     let isMounted = true;
     setLoading(true);
 
-    async function loadTMDb() {
-      const merged = await Promise.all(
-        currentMovies.map(async (movie) => {
-          // use cache if available
-          if (!tmdbCache.current[movie.imdbId]) {
-            tmdbCache.current[movie.imdbId] =
-              await fetchTMDbByImdb(movie.imdbId);
-          }
+  async function loadTMDb() {
+  let isMounted = true;
+  setLoading(true);
 
-          const tmdb = tmdbCache.current[movie.imdbId];
+  const merged = await Promise.all(
+    currentMovies.map(async (movie) => {
+      const cacheKey = `${movie.type}_${movie.tmdbId}`;
 
-          return {
-            imdbId: movie.imdbId,
-            category: movie.category,
-
-            // 🔹 ALL DATA FROM TMDb
-            title: tmdb?.title || tmdb?.name || "Unknown",
-
-            year: tmdb?.release_date
-              ? tmdb.release_date.split("-")[0]
-              : tmdb?.first_air_date
-              ? tmdb.first_air_date.split("-")[0]
-              : "N/A",
-
-            poster: tmdb?.poster_path
-              ? IMAGE_BASE + tmdb.poster_path
-              : "/no-image.png",
-
-            rating: tmdb?.vote_average
-              ? tmdb.vote_average.toFixed(1)
-              : "N/A",
-
-            genres: tmdb?.genres
-              ? tmdb.genres.map((g) => g.name).slice(0, 2)
-              : [],
-          };
-        })
-      );
-
-      if (isMounted) {
-        setTmdbMovies(merged);
-        setLoading(false);
+      // ✅ memory cache
+      if (!tmdbCache.current[cacheKey]) {
+        // ✅ localStorage cache (huge speed boost)
+        const saved = localStorage.getItem(cacheKey);
+        if (saved) {
+          tmdbCache.current[cacheKey] = JSON.parse(saved);
+        } else {
+          const data = await fetchTMDbDetails(movie.tmdbId, movie.type);
+          tmdbCache.current[cacheKey] = data;
+          localStorage.setItem(cacheKey, JSON.stringify(data));
+        }
       }
-    }
+
+      const tmdb = tmdbCache.current[cacheKey];
+
+      return {
+        imdbId: movie.imdbId,
+        tmdbId: movie.tmdbId,
+        category: movie.category,
+        type: movie.type,
+
+        title: tmdb?.title || tmdb?.name || "Unknown",
+
+        year: tmdb?.release_date
+          ? tmdb.release_date.split("-")[0]
+          : tmdb?.first_air_date
+          ? tmdb.first_air_date.split("-")[0]
+          : "N/A",
+
+        poster: tmdb?.poster_path
+          ? `https://image.tmdb.org/t/p/w342${tmdb.poster_path}`
+          : "/no-image.png",
+
+        rating: tmdb?.vote_average
+          ? tmdb.vote_average.toFixed(1)
+          : "N/A",
+
+        genres: tmdb?.genres
+          ? tmdb.genres.map(g => g.name).slice(0, 2)
+          : [],
+      };
+    })
+  );
+
+  if (isMounted) {
+    setTmdbMovies(merged);
+    setLoading(false);
+  }
+}
+
+
 
     loadTMDb();
 
@@ -107,7 +118,7 @@ const MoviesGrid = ({ filter, searchText }) => {
   const visibleMovies = useMemo(() => {
     return searchText
       ? tmdbMovies.filter((m) =>
-          m.title.toLowerCase().includes(searchText.toLowerCase())
+          m.title.toLowerCase().includes(searchText.toLowerCase()),
         )
       : tmdbMovies;
   }, [tmdbMovies, searchText]);
@@ -127,7 +138,6 @@ const MoviesGrid = ({ filter, searchText }) => {
   return (
     <section className="mx-4 md:mx-8 lg:mx-16 my-6">
       <div className="bg-[#141414] rounded-xl border border-[#262626] p-4 md:p-6">
-
         {/* MOVIE GRID */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5">
           {loading ? (
